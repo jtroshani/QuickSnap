@@ -1,0 +1,6 @@
+# Shows a "Sponsor" button on the repo. https://docs.github.com/sponsors
+github: [jtroshani]
+
+# Uncomment and paste your Stripe Payment Link once you've created it
+# (Dashboard -> Payment links -> New). It appears in the same Sponsor menu.
+# custom: ["https://buy.stripe.com/XXXXXXXXXXXXXXXX"]

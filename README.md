@@ -151,6 +151,16 @@ Want a different shortcut? Change the `keyCode` / `modifiers` in
 `AppDelegate.swift` and rebuild. (A proper in-app shortcut picker is the
 obvious next feature.)
 
+## Support
+
+QuickSnap is free and always will be. If it's useful to you:
+
+- **[Sponsor on GitHub](https://github.com/sponsors/jtroshani)** — one-time or monthly.
+- **Tip via Stripe** — link on the [download page](https://jtroshani.github.io/QuickSnap/#support).
+
+Both are configured in [`.github/FUNDING.yml`](.github/FUNDING.yml) and the
+`TIP_URL` constant in `docs/index.html`.
+
 ## License
 
 MIT — do whatever you like with it.
