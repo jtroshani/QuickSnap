@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>QuickSnap</title>
+<meta name="description" content="A tiny macOS menu-bar app: press ⌘⇧2, drag a box, mark it up, and it's on your clipboard — ready to paste anywhere.">
+<meta property="og:title" content="QuickSnap — drag a box, paste it anywhere">
+<meta property="og:description" content="A tiny macOS menu-bar app for grabbing, marking up, and copying a screenshot in one motion.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/social-preview.svg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  /* ---------- tokens ---------- */
+  :root{
+    --ground:#F3F4F7;
+    --surface:#FFFFFF;
+    --surface-2:#F8F9FB;
+    --ink:#14161C;
+    --ink-soft:#565C69;
+    --accent:#1B4DFF;
+    --accent-strong:#1436C7;
+    --on-accent:#FFFFFF;
+    --spark:#FF5A1F;
+    --line:rgba(20,22,28,.12);
+    --line-soft:rgba(20,22,28,.07);
+    --shadow:0 1px 2px rgba(20,22,28,.05), 0 18px 40px -20px rgba(20,22,28,.22);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0A0C11;
+      --surface:#13161E;
+      --surface-2:#171B24;
+      --ink:#EEF0F4;
+      --ink-soft:#98A0AE;
+      --accent:#5E80FF;
+      --accent-strong:#7C98FF;
+      --on-accent:#0A0C11;
+      --spark:#FF6A33;
+      --line:rgba(255,255,255,.13);
+      --line-soft:rgba(255,255,255,.07);
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 24px 50px -22px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0A0C11;
+    --surface:#13161E;
+    --surface-2:#171B24;
+    --ink:#EEF0F4;
+    --ink-soft:#98A0AE;
+    --accent:#5E80FF;
+    --accent-strong:#7C98FF;
+    --on-accent:#0A0C11;
+    --spark:#FF6A33;
+    --line:rgba(255,255,255,.13);
+    --line-soft:rgba(255,255,255,.07);
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 24px 50px -22px rgba(0,0,0,.7);
+  }
+
+  /* ---------- base ---------- */
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size:clamp(1rem,0.95rem + 0.2vw,1.0625rem);
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{
+    font-family:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+    font-weight:800;
+    line-height:1.05;
+    letter-spacing:-0.02em;
+    text-wrap:balance;
+    margin:0;
+  }
+  p{margin:0}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline;text-underline-offset:3px}
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:3px;border-radius:4px}
+  img,svg{display:block;max-width:100%}
+
+  .wrap{max-width:64rem;margin-inline:auto;padding-inline:clamp(1.25rem,4vw,2.5rem)}
+  .section{padding-block:clamp(3.5rem,9vw,6.5rem)}
+  .eyebrow{
+    font-family:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .lead{font-size:clamp(1.05rem,1rem + 0.5vw,1.3rem);color:var(--ink-soft);max-width:40rem}
+
+  kbd{
+    font-family:"JetBrains Mono", ui-monospace, Menlo, monospace;
+    font-size:.85em;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-bottom-width:2px;
+    border-radius:6px;
+    padding:.12em .45em;
+    color:var(--ink);
+    white-space:nowrap;
+  }
+
+  /* ---------- nav ---------- */
+  .nav{
+    position:sticky;top:0;z-index:20;
+    background:color-mix(in srgb, var(--ground) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .brand{display:flex;align-items:center;gap:.6rem;font-family:"Bricolage Grotesque",sans-serif;font-weight:700;color:var(--ink);letter-spacing:-0.01em}
+  .brand:hover{text-decoration:none}
+  .brand .mark{width:26px;height:26px}
+  .nav-right{display:flex;align-items:center;gap:.35rem}
+  .iconbtn{
+    display:grid;place-items:center;width:38px;height:38px;
+    background:transparent;border:1px solid transparent;border-radius:10px;
+    color:var(--ink-soft);cursor:pointer;
+  }
+  .iconbtn:hover{background:var(--surface);border-color:var(--line-soft);color:var(--ink)}
+  .iconbtn svg{width:18px;height:18px}
+  .nav-link{color:var(--ink-soft);font-size:.92rem;padding:.4rem .6rem;border-radius:8px}
+  .nav-link:hover{color:var(--ink);text-decoration:none}
+
+  /* ---------- buttons ---------- */
+  .btn{
+    --_bg:var(--accent);--_fg:var(--on-accent);
+    display:inline-flex;align-items:baseline;gap:.5ch;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:1.02rem;
+    background:var(--_bg);color:var(--_fg);
+    padding:.85rem 1.4rem;border-radius:12px;border:1px solid transparent;
+    box-shadow:var(--shadow);
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .btn small{font-family:"Hanken Grotesk",sans-serif;font-weight:500;font-size:.8rem;opacity:.72}
+  .btn:hover{text-decoration:none;transform:translateY(-2px);background:var(--accent-strong)}
+  .btn:active{transform:translateY(0)}
+  .btn.ghost{
+    --_bg:transparent;--_fg:var(--ink);
+    border-color:var(--line);box-shadow:none;
+  }
+  .btn.ghost:hover{background:var(--surface);border-color:var(--ink-soft)}
+  .cta-row{display:flex;flex-wrap:wrap;gap:.9rem;margin-top:2rem}
+  .meta{margin-top:1.15rem;font-size:.9rem;color:var(--ink-soft)}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;overflow:hidden;padding-top:clamp(2.5rem,6vw,4rem)}
+  .hero::before{
+    content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(circle at center, var(--line-soft) 1px, transparent 1.4px);
+    background-size:26px 26px;
+    -webkit-mask-image:radial-gradient(ellipse 70% 60% at 30% 30%, #000 0%, transparent 75%);
+            mask-image:radial-gradient(ellipse 70% 60% at 30% 30%, #000 0%, transparent 75%);
+  }
+  .hero .wrap{position:relative;z-index:1}
+
+  .marquee{
+    position:relative;
+    display:inline-block;
+    padding:clamp(1.4rem,4vw,2.6rem) clamp(1.4rem,4vw,2.8rem);
+    margin-bottom:1.6rem;
+    border:2px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+    border-radius:8px;
+  }
+  .marquee h1{font-size:clamp(2.5rem,7.5vw,4.5rem)}
+  .marquee .corner{position:absolute;width:20px;height:20px;border:3px solid var(--accent);border-radius:2px}
+  .marquee .corner.tl{top:-3px;left:-3px;border-right:0;border-bottom:0}
+  .marquee .corner.tr{top:-3px;right:-3px;border-left:0;border-bottom:0}
+  .marquee .corner.bl{bottom:-3px;left:-3px;border-right:0;border-top:0}
+  .marquee .corner.br{bottom:-3px;right:-3px;border-left:0;border-top:0}
+  .marquee .spark{
+    position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border-radius:50%;
+    background:var(--spark);box-shadow:0 0 0 4px color-mix(in srgb, var(--spark) 26%, transparent)
+  }
+  .marquee .readout{
+    position:absolute;left:-3px;bottom:-30px;
+    font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--ink-soft);
+    letter-spacing:.04em;
+  }
+
+  @media (prefers-reduced-motion:no-preference){
+    .marquee{clip-path:inset(0 0 0 0);animation:sweep .55s cubic-bezier(.2,.7,.2,1) both}
+    .marquee .corner{opacity:0;animation:pop .3s ease both}
+    .marquee .corner.tl{animation-delay:.5s}
+    .marquee .corner.tr{animation-delay:.58s}
+    .marquee .corner.bl{animation-delay:.66s}
+    .marquee .corner.br{animation-delay:.74s}
+    .marquee .spark{opacity:0;animation:pop .35s ease .8s both, ping 2.6s ease-in-out 1.4s infinite}
+    .marquee .readout{opacity:0;animation:fade .4s ease .9s both}
+    @keyframes sweep{from{clip-path:inset(46% 46% 46% 46%)}to{clip-path:inset(0 0 0 0)}}
+    @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+    @keyframes fade{to{opacity:1}}
+    @keyframes ping{0%,70%,100%{box-shadow:0 0 0 4px color-mix(in srgb,var(--spark) 26%,transparent)}35%{box-shadow:0 0 0 12px color-mix(in srgb,var(--spark) 0%,transparent)}}
+  }
+
+  /* ---------- steps ---------- */
+  .steps-head{display:flex;flex-direction:column;gap:.6rem;margin-bottom:2.6rem}
+  .steps-head h2{font-size:clamp(1.7rem,3.5vw,2.4rem)}
+  .steps{display:grid;gap:1rem;grid-template-columns:repeat(3,1fr)}
+  @media (max-width:760px){.steps{grid-template-columns:1fr}}
+  .step{
+    background:var(--surface);
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    padding:1.5rem 1.4rem 1.6rem;
+    display:flex;flex-direction:column;gap:.9rem;
+  }
+  .step .num{
+    font-family:"JetBrains Mono",monospace;font-size:.78rem;color:var(--accent);
+    letter-spacing:.12em;
+  }
+  .step .art{height:88px;color:var(--ink)}
+  .step .art svg{height:100%;width:auto}
+  .step h3{font-size:1.2rem;font-weight:700;font-family:"Bricolage Grotesque",sans-serif}
+  .step p{font-size:.95rem;color:var(--ink-soft)}
+  .steps-foot{margin-top:1.6rem;font-size:.95rem;color:var(--ink-soft);max-width:42rem}
+
+  @media (prefers-reduced-motion:no-preference){
+    .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease, transform .6s ease}
+    .reveal.in{opacity:1;transform:none}
+  }
+
+  /* ---------- prose blocks ---------- */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.5rem,5vw,4rem);align-items:start}
+  @media (max-width:760px){.split{grid-template-columns:1fr}}
+  .split h2{font-size:clamp(1.6rem,3vw,2.1rem);margin-bottom:.4rem}
+  .prose p + p{margin-top:1rem}
+  .prose{color:var(--ink-soft)}
+  .prose strong{color:var(--ink);font-weight:600}
+
+  .panel{
+    background:var(--surface);border:1px solid var(--line-soft);
+    border-radius:var(--radius);padding:clamp(1.5rem,4vw,2.2rem);
+  }
+  .panel h2{font-size:1.4rem;margin-bottom:1rem}
+  .panel ol{margin:0;padding-left:1.2rem;display:flex;flex-direction:column;gap:.7rem;color:var(--ink-soft)}
+  .panel li strong{color:var(--ink);font-weight:600}
+  .panel .more{margin-top:1.2rem;font-size:.92rem}
+
+  /* ---------- footer ---------- */
+  .foot{border-top:1px solid var(--line-soft);background:var(--surface-2)}
+  .foot .wrap{padding-block:2.6rem;display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:space-between;align-items:center}
+  .foot .brand{font-size:1rem}
+  .foot-links{display:flex;flex-wrap:wrap;gap:1.2rem;font-size:.9rem}
+  .foot-links a{color:var(--ink-soft)}
+  .foot-links a:hover{color:var(--ink)}
+  .foot .note{width:100%;font-size:.85rem;color:var(--ink-soft);border-top:1px solid var(--line-soft);padding-top:1.4rem;margin-top:.2rem}
+
+  /* ---------- config warning ---------- */
+  .cfg-warn{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--spark);color:#fff;
+    font-size:.85rem;text-align:center;padding:.6rem 1rem;
+    font-family:"JetBrains Mono",monospace;
+  }
+  .cfg-warn code{background:rgba(0,0,0,.22);padding:.1em .4em;border-radius:4px}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <path d="M4 11.5V6.5A2.5 2.5 0 0 1 6.5 4H11.5"/>
+          <path d="M20.5 4H25.5A2.5 2.5 0 0 1 28 6.5V11.5"/>
+          <path d="M28 20.5V25.5A2.5 2.5 0 0 1 25.5 28H20.5"/>
+          <path d="M11.5 28H6.5A2.5 2.5 0 0 1 4 25.5V20.5"/>
+          <circle cx="16" cy="16" r="3.1" fill="var(--spark)" stroke="none"/>
+        </svg>
+      </span>
+      QuickSnap
+    </a>
+    <nav class="nav-right">
+      <a class="nav-link" data-gh="repo" href="#">GitHub</a>
+      <a class="nav-link" data-gh="download" href="#">Download</a>
+      <button class="iconbtn" id="theme" type="button" aria-label="Switch colour theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+        </svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="section hero">
+    <div class="wrap">
+      <p class="eyebrow">Menu-bar app for macOS</p>
+      <div class="marquee">
+        <span class="corner tl"></span><span class="corner tr"></span>
+        <span class="corner bl"></span><span class="corner br"></span>
+        <h1>Drag a box.<br>Paste it anywhere.</h1>
+        <span class="spark" aria-hidden="true"></span>
+        <span class="readout" aria-hidden="true">1440 &times; 476</span>
+      </div>
+      <p class="lead">
+        QuickSnap lives in your menu bar. Press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>2</kbd>,
+        drag over anything on screen, add a highlight or an arrow if you like, then hit
+        <strong style="color:var(--ink)">Copy</strong>. Now <kbd>⌘</kbd> <kbd>V</kbd> drops it into
+        Slack, Mail, Notes &mdash; wherever you are.
+      </p>
+      <div class="cta-row">
+        <a class="btn" data-gh="download" href="#">Download for Mac <small>· .zip · macOS 13+</small></a>
+        <a class="btn ghost" data-gh="repo" href="#">Windows <small>· coming soon</small></a>
+      </div>
+      <p class="meta">Free &amp; open source · Apple silicon &amp; Intel · about 1&nbsp;MB · no account, no tracking</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="steps-head reveal">
+        <p class="eyebrow">How it works</p>
+        <h2>Three keys and a drag</h2>
+      </div>
+      <div class="steps">
+        <article class="step reveal">
+          <span class="num">STEP 01</span>
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 150 88" fill="none">
+              <g stroke="currentColor" stroke-width="2">
+                <rect x="4" y="26" width="42" height="36" rx="7" fill="var(--surface-2)"/>
+                <rect x="54" y="26" width="42" height="36" rx="7" fill="var(--surface-2)"/>
+                <rect x="104" y="26" width="42" height="36" rx="7" fill="var(--surface-2)"/>
+              </g>
+              <g fill="currentColor" font-family="JetBrains Mono, monospace" font-size="20" text-anchor="middle">
+                <text x="25" y="51">⌘</text><text x="75" y="51">⇧</text><text x="125" y="51">2</text>
+              </g>
+            </svg>
+          </div>
+          <h3>Press <kbd>⌘</kbd><kbd>⇧</kbd><kbd>2</kbd></h3>
+          <p>From any app. Your pointer turns into a crosshair.</p>
+        </article>
+        <article class="step reveal">
+          <span class="num">STEP 02</span>
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 150 88" fill="none">
+              <rect x="18" y="14" width="100" height="60" rx="4" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 5" fill="color-mix(in srgb, var(--accent) 8%, transparent)"/>
+              <path d="M96 52l22 22M118 74h-9M118 74v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="68" cy="40" r="3" fill="var(--spark)"/>
+            </svg>
+          </div>
+          <h3>Drag over what you want</h3>
+          <p>A whole window? Press <kbd>Space</kbd> first, then click it.</p>
+        </article>
+        <article class="step reveal">
+          <span class="num">STEP 03</span>
+          <div class="art" aria-hidden="true">
+            <svg viewBox="0 0 150 88" fill="none">
+              <rect x="40" y="12" width="70" height="66" rx="8" fill="var(--surface-2)" stroke="currentColor" stroke-width="2"/>
+              <rect x="58" y="6" width="34" height="14" rx="4" fill="var(--surface)" stroke="currentColor" stroke-width="2"/>
+              <path d="M58 46l12 12 22-24" stroke="var(--spark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>Hit Copy</h3>
+          <p>The markup bar &mdash; highlighter, arrow, box, text &mdash; opens first. Or skip it. Then <kbd>⌘</kbd><kbd>V</kbd> anywhere.</p>
+        </article>
+      </div>
+      <p class="steps-foot reveal">
+        Prefer a file? <strong style="color:var(--ink)">Save</strong> drops one PNG on your Desktop and
+        shows it in Finder. Nothing touches your disk unless you ask it to.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="wrap split">
+      <div class="reveal">
+        <p class="eyebrow">Why it exists</p>
+        <h2>Small on purpose</h2>
+      </div>
+      <div class="prose reveal">
+        <p>macOS already has <kbd>⌘</kbd><kbd>⇧</kbd><kbd>⌃</kbd><kbd>4</kbd>. QuickSnap is that
+        same system selector with a shortcut you'll actually remember, a menu-bar icon you can
+        find, and a markup step built in.</p>
+        <p><strong>No Electron. No account. No telemetry.</strong> It's a native Swift app about
+        the size of a photo, and the source is right there on GitHub.</p>
+        <p>Opens at login if you want it to. Quits from the same little menu. That's the whole
+        surface area &mdash; a six-year-old gets it on the first try.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="setup">
+    <div class="wrap">
+      <div class="panel reveal">
+        <h2>First launch</h2>
+        <ol>
+          <li><strong>Unzip</strong> and drag <strong>QuickSnap</strong> into your Applications folder.</li>
+          <li><strong>Right-click it → Open → Open.</strong> One time only &mdash; it isn't signed with a
+          paid Apple certificate, so the first open needs your OK.</li>
+          <li><strong>Allow Screen&nbsp;Recording</strong> when macOS asks. Every screenshot tool needs
+          this. Turn QuickSnap on, then reopen it &mdash; the permission only applies on relaunch.</li>
+        </ol>
+        <p class="more"><a data-gh="readme" href="#">Full setup notes &amp; troubleshooting on GitHub →</a></p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <path d="M4 11.5V6.5A2.5 2.5 0 0 1 6.5 4H11.5"/>
+          <path d="M20.5 4H25.5A2.5 2.5 0 0 1 28 6.5V11.5"/>
+          <path d="M28 20.5V25.5A2.5 2.5 0 0 1 25.5 28H20.5"/>
+          <path d="M11.5 28H6.5A2.5 2.5 0 0 1 4 25.5V20.5"/>
+          <circle cx="16" cy="16" r="3.1" fill="var(--spark)" stroke="none"/>
+        </svg>
+      </span>
+      QuickSnap
+    </a>
+    <nav class="foot-links">
+      <a data-gh="repo" href="#">Source</a>
+      <a data-gh="releases" href="#">Releases</a>
+      <a data-gh="readme" href="#">Docs</a>
+      <a data-gh="repo" href="#">MIT License</a>
+    </nav>
+    <p class="note">
+      Built with Swift by Jetmir Troshani. A Windows build isn't available yet &mdash; QuickSnap is
+      a native macOS app that leans on the system's own selection tool. Star the repo to hear when
+      a Windows version lands.
+    </p>
+  </div>
+</footer>
+
+<div class="cfg-warn" id="cfg-warn" hidden>
+  Edit <code>docs/index.html</code> — set <code>REPO</code> to your GitHub <code>username/repo</code> so the download links work.
+</div>
+
+<script>
+  // ---- point every GitHub link at your repo -------------------------------
+  // CHANGE THIS to your GitHub "username/repository":
+  const REPO = "USERNAME/QuickSnap";
+
+  const base = "https://github.com/" + REPO;
+  const urls = {
+    repo: base,
+    releases: base + "/releases",
+    download: base + "/releases/latest/download/QuickSnap.zip",
+    readme: base + "#readme"
+  };
+  document.querySelectorAll("[data-gh]").forEach(function(el){
+    el.setAttribute("href", urls[el.getAttribute("data-gh")] || base);
+  });
+  if (REPO.indexOf("USERNAME/") === 0) {
+    document.getElementById("cfg-warn").hidden = false;
+  }
+
+  // ---- theme toggle (tri-state aware) ------------------------------------
+  var root = document.documentElement;
+  try {
+    var saved = localStorage.getItem("qs-theme");
+    if (saved === "dark" || saved === "light") root.setAttribute("data-theme", saved);
+  } catch (e) {}
+  document.getElementById("theme").addEventListener("click", function(){
+    var isDark = root.getAttribute("data-theme")
+      ? root.getAttribute("data-theme") === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = isDark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("qs-theme", next); } catch (e) {}
+  });
+
+  // ---- scroll reveal ---------------------------------------------------
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) { entry.target.classList.add("in"); io.unobserve(entry.target); }
+      });
+    }, { rootMargin: "0px 0px -10% 0px" });
+    document.querySelectorAll(".reveal").forEach(function(el){ io.observe(el); });
+  } else {
+    document.querySelectorAll(".reveal").forEach(function(el){ el.classList.add("in"); });
+  }
+</script>
+
+</body>
+</html>
