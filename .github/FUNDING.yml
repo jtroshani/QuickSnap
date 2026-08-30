@@ -1,5 +1,3 @@
-# Shows a "Sponsor" button on the repo. https://docs.github.com/sponsors
-github: [jtroshani]
-
-# Stripe "pay what you want" tip link — appears in the same Sponsor menu.
+# Shows a "Sponsor" button on the repo pointing at the Stripe tip link.
+# https://docs.github.com/sponsors
 custom: ["https://buy.stripe.com/bJe28r54X7P46FH285gbm00"]

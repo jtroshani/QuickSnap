@@ -153,13 +153,11 @@ obvious next feature.)
 
 ## Support
 
-QuickSnap is free and always will be. If it's useful to you:
-
-- **[Sponsor on GitHub](https://github.com/sponsors/jtroshani)** — one-time or monthly.
-- **Tip via Stripe** — link on the [download page](https://jtroshani.github.io/QuickSnap/#support).
-
-Both are configured in [`.github/FUNDING.yml`](.github/FUNDING.yml) and the
-`TIP_URL` constant in `docs/index.html`.
+QuickSnap is free and always will be. If it's useful to you, there's a
+pay-what-you-want tip link on the
+[download page](https://jtroshani.github.io/QuickSnap/#support) (and in the
+repo's **Sponsor** button). It's set via `TIP_URL` in `docs/index.html` and
+[`.github/FUNDING.yml`](.github/FUNDING.yml).
 
 ## License
 

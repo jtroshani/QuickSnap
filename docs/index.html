@@ -417,11 +417,9 @@
         <p class="eyebrow">Support</p>
         <h2>QuickSnap is free &mdash; tips keep it moving</h2>
         <p>No paywall, no account, no nag screens, ever. If it saves you time, you can drop a tip
-        or sponsor development. Completely optional, and it all goes toward building the next
-        features.</p>
+        toward development. Completely optional, and it all goes toward building the next features.</p>
         <div class="cta-row">
           <a class="btn" data-tip href="#" hidden>Leave a tip</a>
-          <a class="btn ghost" data-sponsor href="#">Sponsor on GitHub</a>
         </div>
       </div>
     </div>
@@ -485,11 +483,9 @@
   // Paste your Stripe Payment Link here (looks like https://buy.stripe.com/xxxxxxxx).
   // Leave empty to hide the "Leave a tip" button.
   var TIP_URL = "https://buy.stripe.com/bJe28r54X7P46FH285gbm00";
-  var SPONSOR_URL = "https://github.com/sponsors/" + REPO.split("/")[0];
 
   var tipBtn = document.querySelector("[data-tip]");
   if (tipBtn && TIP_URL) { tipBtn.href = TIP_URL; tipBtn.hidden = false; }
-  document.querySelectorAll("[data-sponsor]").forEach(function(el){ el.href = SPONSOR_URL; });
 
   // ---- theme toggle (tri-state aware) ------------------------------------
   var root = document.documentElement;
