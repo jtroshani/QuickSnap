@@ -10,9 +10,12 @@ final class GlobalHotKey {
     private var action: (() -> Void)?
     private let hotKeyID = EventHotKeyID(signature: fourCharCode("QSNP"), id: 1)
 
-    func register(keyCode: UInt32, modifiers: NSEvent.ModifierFlags, action: @escaping () -> Void) {
+    /// Returns `false` if the combo is already claimed by another running app
+    /// (Carbon hands back `eventHotKeyExistsErr` in that case) — the caller
+    /// should try a different combo or tell the user.
+    @discardableResult
+    func register(keyCode: UInt32, modifiers: NSEvent.ModifierFlags, action: @escaping () -> Void) -> Bool {
         unregister()
-        self.action = action
 
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                       eventKind: UInt32(kEventHotKeyPressed))
@@ -31,8 +34,14 @@ final class GlobalHotKey {
             return noErr
         }, 1, &eventType, selfPtr, &eventHandler)
 
-        RegisterEventHotKey(keyCode, Self.carbonModifiers(from: modifiers),
-                            hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        let status = RegisterEventHotKey(keyCode, Self.carbonModifiers(from: modifiers),
+                                         hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        if status == noErr {
+            self.action = action
+            return true
+        }
+        unregister()
+        return false
     }
 
     func unregister() {
