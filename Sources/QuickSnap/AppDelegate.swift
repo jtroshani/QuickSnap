@@ -25,22 +25,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Shortcut
 
-    /// Tries Cmd+Shift+2 first. If another running app already owns that combo
-    /// (a common clash with other screenshot/recording tools), falls back to
-    /// Cmd+Option+Shift+2 and tells the user what happened.
+    private struct Combo { let keyCode: UInt32; let modifiers: NSEvent.ModifierFlags; let label: String }
+
+    /// Tried in order. F1 is the preferred one-key trigger; if something else
+    /// on the system already owns it (or a later combo), we fall down the list
+    /// and tell the user what happened.
+    private var comboCandidates: [Combo] {
+        [
+            Combo(keyCode: UInt32(kVK_F1), modifiers: [], label: "F1"),
+            Combo(keyCode: UInt32(kVK_ANSI_2), modifiers: [.command, .shift], label: "\u{2318}\u{21E7}2"),
+            Combo(keyCode: UInt32(kVK_ANSI_2), modifiers: [.command, .option, .shift],
+                 label: "\u{2318}\u{2325}\u{21E7}2"),
+        ]
+    }
+
     private func registerHotKey() {
         let action: () -> Void = { [weak self] in self?.capture.captureAreaAndEdit() }
+        let candidates = comboCandidates
 
-        if hotKey.register(keyCode: UInt32(kVK_ANSI_2), modifiers: [.command, .shift], action: action) {
-            applyShortcutLabel("\u{2318}\u{21E7}2")
-        } else if hotKey.register(keyCode: UInt32(kVK_ANSI_2),
-                                  modifiers: [.command, .option, .shift], action: action) {
-            applyShortcutLabel("\u{2318}\u{2325}\u{21E7}2")
-            presentConflictAlert(fellBackTo: "\u{2318}\u{2325}\u{21E7}2")
-        } else {
-            applyShortcutLabel(nil)
-            presentConflictAlert(fellBackTo: nil)
+        for (index, combo) in candidates.enumerated() {
+            if hotKey.register(keyCode: combo.keyCode, modifiers: combo.modifiers, action: action) {
+                applyShortcutLabel(combo.label)
+                if index > 0 {
+                    presentConflictAlert(claimedLabel: candidates[0].label, fellBackTo: combo.label)
+                }
+                return
+            }
         }
+        applyShortcutLabel(nil)
+        presentConflictAlert(claimedLabel: candidates[0].label, fellBackTo: nil)
     }
 
     private func applyShortcutLabel(_ label: String?) {
@@ -65,20 +78,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
     }
 
-    private func presentConflictAlert(fellBackTo: String?) {
+    private func presentConflictAlert(claimedLabel: String, fellBackTo: String?) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "\u{2318}\u{21E7}2 is already taken"
+        alert.messageText = "\(claimedLabel) is already taken"
 
         let suspect = likelyConflictingApp()
         var text = suspect.map {
-            "Another running app — most likely \($0) — has already claimed \u{2318}\u{21E7}2 as its own shortcut. Only one app can use a given combo at a time."
-        } ?? "Another running app has already claimed \u{2318}\u{21E7}2 as its own shortcut. Only one app can use a given combo at a time."
+            "Another running app — most likely \($0) — has already claimed \(claimedLabel) as its own shortcut. Only one app can use a given combo at a time."
+        } ?? "Another running app (or macOS itself, if this is a function key) has already claimed \(claimedLabel). Only one app can use a given combo at a time."
 
         if let fellBackTo {
-            text += "\n\nQuickSnap switched to \(fellBackTo) instead — that shortcut works right now. To get \u{2318}\u{21E7}2 back, open the other app's settings, change or turn off its shortcut, then reopen QuickSnap."
+            text += "\n\nQuickSnap switched to \(fellBackTo) instead — that shortcut works right now. To get \(claimedLabel) back, open the other app's settings, change or turn off its shortcut, then reopen QuickSnap."
         } else {
-            text += "\n\nQuickSnap couldn't find a free alternative. Use the menu-bar camera icon to take a screenshot for now, or free up the shortcut in the other app and reopen QuickSnap."
+            text += "\n\nQuickSnap couldn't find a free alternative. Use the menu-bar camera icon to take a screenshot for now, or free up the shortcut and reopen QuickSnap."
         }
         alert.informativeText = text
         alert.addButton(withTitle: "OK")
