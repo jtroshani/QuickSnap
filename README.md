@@ -98,6 +98,20 @@ After it finishes:
 To undo: delete `/Applications/QuickSnap.app` and remove the
 `QuickSnap Local Signing` certificate in **Keychain Access**.
 
+## Troubleshooting: "⌘⇧2 stopped working after I installed/updated something"
+
+Global shortcuts are first-come-first-served — only one app can own a given
+combo. If another screen-capture/recording app (or its updater) grabs
+**⌘⇧2** first, QuickSnap's registration silently fails on older versions.
+
+Current behavior: on launch, QuickSnap detects this and automatically falls
+back to **⌘⌥⇧2**, showing a one-time alert naming the likely culprit (it checks
+for other running screenshot/recording apps). The menu-bar item always shows
+whichever combo is actually active.
+
+**To get ⌘⇧2 back:** open the other app's preferences and change or disable
+its shortcut for screen capture, then quit and reopen QuickSnap.
+
 ## Publishing a release on GitHub
 
 - **Manual:** run `./build.sh`, then
