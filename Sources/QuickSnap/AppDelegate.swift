@@ -45,13 +45,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for (index, combo) in candidates.enumerated() {
             if hotKey.register(keyCode: combo.keyCode, modifiers: combo.modifiers, action: action) {
+                NSLog("QuickSnap: registered shortcut \(combo.label) (candidate #\(index))")
                 applyShortcutLabel(combo.label)
                 if index > 0 {
                     presentConflictAlert(claimedLabel: candidates[0].label, fellBackTo: combo.label)
                 }
                 return
             }
+            NSLog("QuickSnap: candidate \(combo.label) unavailable, trying next")
         }
+        NSLog("QuickSnap: no shortcut candidate could be registered")
         applyShortcutLabel(nil)
         presentConflictAlert(claimedLabel: candidates[0].label, fellBackTo: nil)
     }

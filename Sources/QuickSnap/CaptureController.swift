@@ -10,7 +10,9 @@ final class CaptureController {
     /// stops macOS from dropping its own thumbnail in the corner — and read the
     /// image back out to edit it.
     func captureAreaAndEdit() {
+        NSLog("QuickSnap: captureAreaAndEdit() fired")
         guard ScreenRecordingPermission.isGranted else {
+            NSLog("QuickSnap: Screen Recording permission NOT granted — showing setup alert")
             ScreenRecordingPermission.presentSetupAlert()
             return
         }
@@ -19,14 +21,19 @@ final class CaptureController {
         let changeCountBefore = pasteboard.changeCount
 
         run(["-i", "-c"]) { success in
+            NSLog("QuickSnap: screencapture exited success=\(success) changeCount \(changeCountBefore)->\(pasteboard.changeCount)")
             // Esc / cancel leaves the clipboard untouched -> nothing to do.
             guard success, pasteboard.changeCount != changeCountBefore else { return }
 
             let data = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff)
             if let data, let image = NSImage(data: data) {
+                NSLog("QuickSnap: presenting editor with captured image")
                 EditorWindowController.present(with: image)
             } else if let image = NSImage(pasteboard: pasteboard) {
+                NSLog("QuickSnap: presenting editor with pasteboard image (fallback path)")
                 EditorWindowController.present(with: image)
+            } else {
+                NSLog("QuickSnap: clipboard changed but no image could be read from it")
             }
         }
     }
@@ -44,6 +51,7 @@ final class CaptureController {
         do {
             try task.run()
         } catch {
+            NSLog("QuickSnap: failed to launch /usr/sbin/screencapture: \(error)")
             NSSound.beep()
             DispatchQueue.main.async { completion?(false) }
         }
